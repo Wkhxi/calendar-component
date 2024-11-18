@@ -1,11 +1,15 @@
+import dayjs, { Dayjs } from "dayjs";
 import MonthCalendar from "./MonthCalendar";
 import "./index.scss";
-import { Dayjs } from "dayjs";
 import Header from "./Header";
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, useState } from "react";
+import cs from "classnames";
+import LocaleContext from "./LocalContext";
+import { useControllableValue } from "ahooks";
 
 export interface CalendarProps {
-  value: Dayjs;
+  value?: Dayjs;
+  defaultValue?: Dayjs;
   style?: CSSProperties;
   className?: string | string[];
   // 定制日期显示，会完全覆盖日期单元格
@@ -18,11 +22,59 @@ export interface CalendarProps {
 }
 
 function Calendar(props: CalendarProps) {
+  const { style, className, locale, onChange } = props;
+
+  const [curValue, setCurValue] = useControllableValue<Dayjs>(props, {
+    defaultValue: dayjs(),
+  });
+
+  const [curMonth, setCurMonth] = useState<Dayjs>(curValue);
+
+  const classNames = cs("calendar", className);
+
+  function selectHandler(date: Dayjs) {
+    setCurValue(date);
+    setCurMonth(date);
+    onChange?.(date);
+  }
+
+  function prevMonthHandler() {
+    setCurMonth(curMonth.subtract(1, "month"));
+  }
+
+  function nextMonthHandler() {
+    setCurMonth(curMonth.add(1, "month"));
+  }
+
+  function todayHandler() {
+    const date = dayjs(Date.now());
+
+    setCurValue(date);
+    setCurMonth(date);
+    onChange?.(date);
+  }
+
   return (
-    <div className="calendar">
-      <Header />
-      <MonthCalendar {...props} />
-    </div>
+    <LocaleContext.Provider
+      value={{
+        locale: locale || navigator.language,
+      }}
+    >
+      <div className={classNames} style={style}>
+        <Header
+          curMonth={curMonth}
+          prevMonthHandler={prevMonthHandler}
+          nextMonthHandler={nextMonthHandler}
+          todayHandler={todayHandler}
+        ></Header>
+        <MonthCalendar
+          {...props}
+          value={curValue}
+          curMonth={curMonth}
+          selectHandler={selectHandler}
+        />
+      </div>
+    </LocaleContext.Provider>
   );
 }
 
